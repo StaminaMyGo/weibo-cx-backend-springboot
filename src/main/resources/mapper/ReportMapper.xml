@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD MAPPER 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hn.it.weibo.mapper.ReportMapper">
+    <select id="reportPublishByUser" resultType="com.hn.it.weibo.entity.ReportItem">
+        select
+            CONCAT(u.user_nickname,"[",w.wb_userid,"]") as name,
+            count(*) as value
+        from weibos w
+        join users u on u.user_id = w.wb_userid
+        group by CONCAT(u.user_nickname,"[",w.wb_userid,"]")
+    </select>
+    
+    <!-- 动态 SQL 查询，使用 statementType="STATEMENT" 允许执行拼接的 SQL -->
+    <select id="reportBySql" statementType="STATEMENT" resultType="java.util.HashMap">
+        ${sql}
+    </select>
+</mapper>

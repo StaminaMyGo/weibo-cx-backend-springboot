@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<!-- 修正 1: 建议使用 Spring Boot 3.x 配合 Java 17 -->
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.3.0</version> <!-- 或者 3.2.5 等稳定版本 -->
+		<relativePath/>
+	</parent>
+
+	<groupId>com.hn.it</groupId>
+	<artifactId>weibo</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>weibo</name>
+	<description>weibo</description>
+
+	<properties>
+		<!-- 修正 1: Java 17 需要配合 Spring Boot 3 -->
+		<java.version>17</java.version>
+
+		<!-- 建议：在 properties 中定义版本号，方便统一管理 -->
+		<mybatis-plus.version>3.5.10.1</mybatis-plus.version>
+		<druid.version>1.2.20</druid.version>
+		<thymeleaf.version>3.1.2.RELEASE</thymeleaf.version>
+		<thymeleaf-layout-dialect.version>3.3.0</thymeleaf-layout-dialect.version>
+	</properties>
+
+	<dependencies>
+		<!-- 修正 2 & 3: MyBatis Plus Starter，引用了上面定义的版本变量 -->
+		<dependency>
+			<groupId>com.baomidou</groupId>
+			<artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+			<version>${mybatis-plus.version}</version>
+		</dependency>
+
+		<!-- 修正 3: jsqlparser 通常不需要手动引入，starter 会自带 -->
+		<!-- 如果需要单独使用，建议不写版本号，或者确认兼容性 -->
+		<dependency>
+			<groupId>com.baomidou</groupId>
+			<artifactId>mybatis-plus-jsqlparser</artifactId>
+			<version>${mybatis-plus.version}</version>
+		</dependency>
+
+		<!-- 修正 3: Druid -->
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>druid-spring-boot-3-starter</artifactId>
+			<version>${druid.version}</version>
+		</dependency>
+
+		<!-- 修正 3: MySQL 驱动 -->
+		<!-- 建议：去掉 version，让 Spring Boot 父 POM 决定版本 -->
+		<dependency>
+			<groupId>com.mysql</groupId>
+			<artifactId>mysql-connector-j</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- 修正 2: 修正为 web，而不是 webmvc -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<!-- 修正 2: 修正为 test -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- 替换掉原来的 jjwt:0.6.0 和 jaxb 依赖 -->
+		<!-- 1. JJWT 核心接口 -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>0.12.5</version>
+		</dependency>
+
+		<!-- 2. JJWT 实现类 (运行时使用) -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>0.12.5</version>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- 3. JJWT JSON 处理 (使用 Jackson 解析 JSON) -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>0.12.5</version>
+			<scope>runtime</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.18.24</version> <!-- 尝试使用这个更稳定的旧版本 -->
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Fastjson 用于 AI 接口 JSON 解析 -->
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>fastjson</artifactId>
+			<version>2.0.40</version>
+		</dependency>
+
+		<!-- Spring Boot Mail Starter 用于发送邮件 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>

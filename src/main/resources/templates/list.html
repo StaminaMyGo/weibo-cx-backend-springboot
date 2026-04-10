@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>用户列表</title>
+    <style>
+        table { width: 80%; margin: 20px auto; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #f2f2f2; }
+        img { width: 50px; height: 50px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+<h2 style="text-align: center;">用户信息列表</h2>
+
+<table>
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>昵称</th>
+        <th>登录名</th>
+        <th>头像</th>
+        <th>积分</th>
+        <th>关注数</th>
+    </tr>
+    </thead>
+    <tbody>
+    <!-- 使用 Thymeleaf 语法遍历后端传来的 userList -->
+    <tr th:each="user : ${userList}">
+        <td th:text="${user.id}"></td>
+        <td th:text="${user.nickName}"></td>
+        <td th:text="${user.loginName}"></td>
+        <td>
+            <!-- 如果 photo 字段存的是图片链接 -->
+            <img th:src="${user.photo}" alt="头像" th:if="${user.photo != null}">
+        </td>
+        <td th:text="${user.score}"></td>
+        <td th:text="${user.attionCount}"></td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
