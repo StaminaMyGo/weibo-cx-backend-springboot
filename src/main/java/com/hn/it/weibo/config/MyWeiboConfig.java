@@ -15,7 +15,7 @@ public class MyWeiboConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry){
         // 映射 /imgs/** 到本地文件夹
         registry.addResourceHandler("/imgs/**")
-                .addResourceLocations("file:D:/ideaprj/weibo/static/imgs/");
+                .addResourceLocations("file:E:/E_projects/weibo/static/imgs/");
     }
 
     /**

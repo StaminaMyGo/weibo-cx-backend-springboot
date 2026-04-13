@@ -345,28 +345,41 @@ public class UserController {
     public RespEntity updateAvatar(@RequestHeader("Authorization") String authorization,
                                    @RequestBody Map<String, String> params) {
         try {
+            System.out.println("=== 头像更新接口调试 ===");
+            System.out.println("收到的 Authorization: " + authorization);
+            
             // 1. 解析 Token 获取用户 ID
             String token = authorization.replace("Bearer ", "");
+            System.out.println("提取的 Token: " + token.substring(0, Math.min(30, token.length())) + "...");
+            
             Claims claims = jwtUtil.parseToken(token);
+            System.out.println("Token 解析成功，Claims: " + claims);
+            
             Long userId = ((Number) claims.get("userId")).longValue();
+            System.out.println("用户ID: " + userId);
 
             // 2. 获取新头像路径
             String photo = params.get("photo");
+            System.out.println("头像路径: " + photo);
+            
             if (photo == null || photo.isEmpty()) {
                 return RespEntity.error(400, "参数错误：头像路径不能为空");
             }
 
             // 3. 更新数据库 user_photo 字段
-            // MyBatis-Plus 的 updateById 会自动忽略 null 字段，
-            // 这里只设置 id 和 photo，即等价于 UPDATE users SET user_photo = ? WHERE user_id = ?
             User user = new User();
             user.setId(userId.intValue());
             user.setPhoto(photo);
             userService.updateById(user);
 
+            System.out.println("头像更新成功");
             return RespEntity.success("头像更新成功", null);
         } catch (Exception e) {
-            return RespEntity.error(401, "Token 无效或已过期");
+            System.out.println("=== 头像更新失败 ===");
+            System.out.println("错误类型: " + e.getClass().getName());
+            System.out.println("错误信息: " + e.getMessage());
+            e.printStackTrace();
+            return RespEntity.error(500, "头像更新失败: " + e.getMessage());
         }
     }
 }

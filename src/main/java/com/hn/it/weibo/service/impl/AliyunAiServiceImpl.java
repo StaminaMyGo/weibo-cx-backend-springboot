@@ -13,8 +13,8 @@ import java.time.Duration;
 
 @Service("aliyunAiServiceImpl")
 public class AliyunAiServiceImpl implements AiService {
-    
-    @Value("${my.aliyun_apikey:sk-4d76fdc6ca274660b87523f22e2af2c6}")
+//    sk-46a614aeb6e04c45bd76b201389e692d
+    @Value("${my.aliyun.api-key}")
     private String apiKey;
 
     @Override

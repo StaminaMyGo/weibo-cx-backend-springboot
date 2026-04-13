@@ -17,7 +17,7 @@ import java.util.UUID;
 public class GlobalController {
     
     // 图片存储目录
-    private static final String IMG_DIR = "D:/ideaprj/weibo/static/imgs/";
+    private static final String IMG_DIR = "E:/E_projects/weibo/static/imgs/";
     
     /**
      * 上传图片

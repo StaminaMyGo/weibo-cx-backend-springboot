@@ -13,6 +13,7 @@ import io.jsonwebtoken.Claims;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.bind.annotation.*;
@@ -51,10 +52,11 @@ public class WeiboController {
     private static final Logger logger = LoggerFactory.getLogger(WeiboController.class);
 
     // 阿里云 DashScope API Key
-    private static final String DASHSCOPE_API_KEY = "sk-4d76fdc6ca274660b87523f22e2af2c6";
+    @Value("${my.aliyun.api-key}")
+    private  String DASHSCOPE_API_KEY;
 
     // 邮件接收地址
-    private static final String REJECT_EMAIL_TO = "2318435942@qq.com";
+    private static final String REJECT_EMAIL_TO = "1247079250@qq.com";
 
     @Autowired
     private WeiboService weiboService;
@@ -300,7 +302,7 @@ public class WeiboController {
             String localFileName = downloadAndSaveImage(aiImageUrl);
 
             Map<String, Object> result = new HashMap<>();
-            result.put("imageUrl", localFileName);
+            result.put("imageUrl",  "/imgs/" + localFileName);
             return RespEntity.success("生成成功", result);
         } catch (Exception e) {
             e.printStackTrace();
@@ -415,7 +417,7 @@ public class WeiboController {
      * 下载 AI 生成的图片并保存到本地
      */
     private String downloadAndSaveImage(String imageUrl) throws Exception {
-        String IMG_DIR = "D:/ideaprj/weibo/static/imgs/";
+        String IMG_DIR = "E:/E_projects/weibo/static/imgs/";
         File imgFolder = new File(IMG_DIR);
         if (!imgFolder.exists()) {
             imgFolder.mkdirs();
@@ -447,6 +449,11 @@ public class WeiboController {
         // 3. 保存到本地
         File destFile = new File(IMG_DIR + newFileName);
         Files.write(destFile.toPath(), imageBytes);
+        System.out.println("AI 图片已保存到: " + destFile.getAbsolutePath());
+        System.out.println("=== AI 图片保存成功 ===");
+        System.out.println("保存路径: " + destFile.getAbsolutePath());
+        System.out.println("文件名: " + newFileName);
+
 
         return newFileName;
     }

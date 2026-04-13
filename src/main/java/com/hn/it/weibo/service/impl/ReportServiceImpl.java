@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
 @Service
@@ -66,8 +67,8 @@ public class ReportServiceImpl implements ReportService {
           `wb_createtime` datetime DEFAULT NULL,
           `wb_readcount` int DEFAULT NULL,
           `wb_img` varchar(100) DEFAULT NULL,
-          `wb_pass` tinyint DEFAULT '0',
-          `wb_remark` varchar(500) DEFAULT NULL,
+          `is_pass` int DEFAULT '1' COMMENT '审核状态:1通过,0不通过',
+          `remark` varchar(500) DEFAULT NULL COMMENT 'AI审核备注/违规原因',
           PRIMARY KEY (`wb_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """;
@@ -79,6 +80,16 @@ public class ReportServiceImpl implements ReportService {
     
     @Override
     public Map<String, Object> reportDynamic(String prompt, String chartType) {
+        // 委托给带进度的版本，但不传递回调
+        return reportDynamicWithProgress(prompt, chartType, null);
+    }
+    
+    @Override
+    public Map<String, Object> reportDynamicWithProgress(String prompt, String chartType, ProgressCallback callback) {
+        if (callback != null) {
+            callback.onProgress(1, "AI 正在分析需求并生成 SQL...", 10);
+        }
+        
         // 1. 构建 System Prompt（包含数据库结构）
         String systemPrompt = "你是一个数据库工程师，根据用户提供的报表需求，写出统计用的 SQL 语句。\n" +
                 "当前工程为微博平台，数据库为 MySQL，工程数据库的结构如下，请自行推断表的主外键关系：\n" +
@@ -90,7 +101,7 @@ public class ReportServiceImpl implements ReportService {
         
         // 2. 调用 AI 生成 SQL
         JSONObject requestBody = new JSONObject();
-        requestBody.put("model", "qwen3.5-plus");
+        requestBody.put("model", "qwen-turbo");  // 使用快速模型，减少响应时间
         
         com.alibaba.fastjson.JSONArray messages = new com.alibaba.fastjson.JSONArray();
         
@@ -113,10 +124,34 @@ public class ReportServiceImpl implements ReportService {
         JSONObject resultObj = JSON.parseObject(aiResult);
         
         // 获取 message 对象
-        JSONObject message = resultObj.getJSONArray("choices")
-                .getJSONObject(0)
-                .getJSONObject("message");
-        
+//        JSONObject message = resultObj.getJSONArray("choices")
+//                .getJSONObject(0)
+//                .getJSONObject("message");
+        // 检查是否有错误响应
+        if (resultObj.containsKey("error")) {
+            JSONObject error = resultObj.getJSONObject("error");
+            String errorMsg = error.getString("message");
+            String errorCode = error.getString("code");
+            throw new RuntimeException("AI 接口调用失败 [" + errorCode + "]: " + errorMsg);
+        }
+
+        // 获取 choices 数组并进行空值检查
+        com.alibaba.fastjson.JSONArray choices = resultObj.getJSONArray("choices");
+        if (choices == null || choices.isEmpty()) {
+            throw new RuntimeException("AI 接口返回数据格式异常：缺少 choices 字段");
+        }
+
+        JSONObject firstChoice = choices.getJSONObject(0);
+        if (firstChoice == null) {
+            throw new RuntimeException("AI 接口返回数据格式异常：choices 为空");
+        }
+
+        JSONObject message = firstChoice.getJSONObject("message");
+        if (message == null) {
+            throw new RuntimeException("AI 接口返回数据格式异常：缺少 message 字段");
+        }
+
+
         // 优先使用 content 字段（qwen-plus 模型返回）
         String content = message.getString("content");
         
@@ -160,6 +195,10 @@ public class ReportServiceImpl implements ReportService {
         System.out.println("=== 最终提取的 SQL ===");
         System.out.println(cleanSql);
         
+        if (callback != null) {
+            callback.onProgress(2, "SQL 生成成功，正在查询数据库...", 40);
+        }
+        
         // 3. SQL 安全过滤（只允许 SELECT 开头）
         if (!cleanSql.toUpperCase().startsWith("SELECT")) {
             throw new RuntimeException("AI 生成的 SQL 不符合安全规范（非 SELECT 开头），已拦截。原始内容: " + content);
@@ -168,8 +207,16 @@ public class ReportServiceImpl implements ReportService {
         // 4. 执行 SQL 查询
         List<Map<String, Object>> data = reportMapper.reportBySql(cleanSql);
         
+        if (callback != null) {
+            callback.onProgress(3, "数据库查询完成，正在生成图表配置...", 70);
+        }
+        
         // 5. 调用 AI 生成 ECharts 配置
         String echartOption = createEchartOption(data, chartType);
+        
+        if (callback != null) {
+            callback.onProgress(4, "图表配置生成完成，正在返回结果...", 90);
+        }
         
         // 6. 返回结果
         Map<String, Object> result = new HashMap<>();
@@ -182,15 +229,25 @@ public class ReportServiceImpl implements ReportService {
      * 根据数据生成 ECharts 配置
      */
     public String createEchartOption(List<Map<String, Object>> data, String chartType) {
+        // 如果数据为空，返回空配置，不调用 AI
+        if (data == null || data.isEmpty()) {
+            System.out.println("=== 数据为空，返回默认空图表配置 ===");
+            return "{\"title\":{\"text\":\"暂无数据\"},\"tooltip\":{},\"xAxis\":{\"type\":\"category\",\"data\":[]},\"yAxis\":{\"type\":\"value\"},\"series\":[{\"type\":\"bar\",\"data\":[]}]}";
+        }
+        
         String dataJson = JSON.toJSONString(data);
         
+        // 修改 Prompt，要求返回纯 JSON 格式
         String systemPrompt = "你是一个图表工程师，根据用户提供的报表数据，制作出 echarts 的图表的关键配置。\n" +
                 "你可参考 echarts 官网的示例结构，根据用户指定的图表类型，对用户提供的报表数据，自动分析，制作出匹配的 option 选项。\n" +
                 "输出的要求：\n" +
-                "1. 只需要 let option = ... 的内容输出，不要输出其他任何文字，因为获得 option 结构后会进行后续处理。";
+                "1. 只输出标准的 JSON 对象，不要包含 let option = 或任何变量声明。\n" +
+                "2. 不要使用 markdown 代码块标记（如 ```json）。\n" +
+                "3. 不要输出任何解释性文字，只输出 JSON 对象本身。\n" +
+                "4. 确保输出的是合法的 JSON 格式，键名使用双引号。";
         
         JSONObject requestBody = new JSONObject();
-        requestBody.put("model", "qwen3.5-plus");
+        requestBody.put("model", "qwen-turbo");  // 使用快速模型，减少响应时间
         
         com.alibaba.fastjson.JSONArray messages = new com.alibaba.fastjson.JSONArray();
         
@@ -211,14 +268,67 @@ public class ReportServiceImpl implements ReportService {
         
         String aiResult = aiService.send(apiUrl, jsonBody, false);
         JSONObject resultObj = JSON.parseObject(aiResult);
-        String optionStr = resultObj.getJSONArray("choices")
-                .getJSONObject(0)
-                .getJSONObject("message")
-                .getString("content");
         
-        // 清理 markdown 标记
-        optionStr = optionStr.replace("```javascript", "").replace("```", "").replace("```json", "").trim();
-        System.out.println("AI 生成的 ECharts 配置: " + optionStr);
+        // 检查是否有错误响应
+        if (resultObj.containsKey("error")) {
+            JSONObject error = resultObj.getJSONObject("error");
+            String errorMsg = error.getString("message");
+            throw new RuntimeException("AI 生成图表配置失败: " + errorMsg);
+        }
+        
+        com.alibaba.fastjson.JSONArray choices = resultObj.getJSONArray("choices");
+        if (choices == null || choices.isEmpty()) {
+            throw new RuntimeException("AI 返回数据格式异常：缺少 choices 字段");
+        }
+        
+        JSONObject firstChoice = choices.getJSONObject(0);
+        if (firstChoice == null) {
+            throw new RuntimeException("AI 返回数据格式异常：choices 为空");
+        }
+        
+        JSONObject message = firstChoice.getJSONObject("message");
+        if (message == null) {
+            throw new RuntimeException("AI 返回数据格式异常：缺少 message 字段");
+        }
+        
+        String optionStr = message.getString("content");
+        
+        // 如果 content 为空，尝试使用 reasoning_content
+        if (optionStr == null || optionStr.isEmpty()) {
+            optionStr = message.getString("reasoning_content");
+        }
+        
+        if (optionStr == null || optionStr.isEmpty()) {
+            throw new RuntimeException("AI 返回的配置内容为空");
+        }
+        
+        // 清理 markdown 标记（以防 AI 仍然返回）
+        optionStr = optionStr.replace("```javascript", "").replace("```json", "").replace("```", "").trim();
+        
+        System.out.println("=== AI 生成的 ECharts 配置（原始）===");
+        System.out.println(optionStr);
+        
+        // 验证 JSON 格式
+        try {
+            JSON.parseObject(optionStr);
+            System.out.println("=== JSON 格式验证通过 ===");
+        } catch (Exception e) {
+            System.err.println("=== JSON 格式验证失败，尝试修复 ===");
+            System.err.println("原始内容: " + optionStr);
+            // 如果解析失败，尝试提取 JSON 对象部分
+            int startIndex = optionStr.indexOf('{');
+            int endIndex = optionStr.lastIndexOf('}');
+            if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
+                optionStr = optionStr.substring(startIndex, endIndex + 1);
+                System.out.println("=== 提取后的 JSON ===");
+                System.out.println(optionStr);
+                // 再次验证
+                JSON.parseObject(optionStr);
+                System.out.println("=== JSON 格式修复成功 ===");
+            } else {
+                throw new RuntimeException("AI 返回的配置格式错误，无法解析为 JSON: " + e.getMessage());
+            }
+        }
         
         return optionStr;
     }

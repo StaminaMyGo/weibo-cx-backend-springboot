@@ -1,0 +1,3 @@
+ALTER TABLE weibos 
+ADD COLUMN is_pass INT DEFAULT 1 COMMENT '审核状态：1通过，0不通过',
+ADD COLUMN remark VARCHAR(500) DEFAULT NULL COMMENT 'AI审核备注/违规原因';
