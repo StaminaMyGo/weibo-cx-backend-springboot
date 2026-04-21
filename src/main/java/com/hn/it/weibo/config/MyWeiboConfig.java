@@ -3,6 +3,7 @@ package com.hn.it.weibo.config;
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -10,12 +11,24 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class MyWeiboConfig implements WebMvcConfigurer {
+    @Value("${file.upload.image-dir}")
+    private String imgDir;
+
+    @Value("${file.static.path-prefix:/imgs/}")
+    private String staticPathPrefix;
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry){
         // 映射 /imgs/** 到本地文件夹
-        registry.addResourceHandler("/imgs/**")
-                .addResourceLocations("file:E:/E_projects/weibo/static/imgs/");
+        String resourceLocation = "file:" + imgDir;
+        if (!resourceLocation.endsWith("/")) {
+            resourceLocation += "/";
+        }
+//        registry.addResourceHandler("/imgs/**")
+//                .addResourceLocations("file:E:/E_projects/weibo/static/imgs/");
+        registry.addResourceHandler(staticPathPrefix + "**")
+                .addResourceLocations(resourceLocation);
+
     }
 
     /**

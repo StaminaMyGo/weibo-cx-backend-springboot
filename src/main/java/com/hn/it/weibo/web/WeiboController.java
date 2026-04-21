@@ -416,9 +416,12 @@ public class WeiboController {
     /**
      * 下载 AI 生成的图片并保存到本地
      */
+    @Value("${file.upload.image-dir}")
+    private String imgDir;
     private String downloadAndSaveImage(String imageUrl) throws Exception {
-        String IMG_DIR = "E:/E_projects/weibo/static/imgs/";
-        File imgFolder = new File(IMG_DIR);
+//        String IMG_DIR = "E:/E_projects/weibo/static/imgs/";
+
+        File imgFolder = new File(imgDir);
         if (!imgFolder.exists()) {
             imgFolder.mkdirs();
         }
@@ -447,7 +450,7 @@ public class WeiboController {
         String newFileName = uuid + "_" + timestamp + extension;
 
         // 3. 保存到本地
-        File destFile = new File(IMG_DIR + newFileName);
+        File destFile = new File(imgDir , newFileName);
         Files.write(destFile.toPath(), imageBytes);
         System.out.println("AI 图片已保存到: " + destFile.getAbsolutePath());
         System.out.println("=== AI 图片保存成功 ===");

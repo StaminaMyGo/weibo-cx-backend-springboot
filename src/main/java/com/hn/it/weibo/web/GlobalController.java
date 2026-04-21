@@ -1,6 +1,7 @@
 package com.hn.it.weibo.web;
 
 import com.hn.it.weibo.web.dto.RespEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,8 +18,9 @@ import java.util.UUID;
 public class GlobalController {
     
     // 图片存储目录
-    private static final String IMG_DIR = "E:/E_projects/weibo/static/imgs/";
-    
+//    private static final String IMG_DIR = "E:/E_projects/weibo/static/imgs/";
+    @Value("${file.upload.image-dir}")
+    private String imgDir;
     /**
      * 上传图片
      * POST /api/v1/upload/images
@@ -48,13 +50,13 @@ public class GlobalController {
             String newFileName = generateFileName(originalName);
             
             // 5. 确保文件夹存在
-            File imgFolder = new File(IMG_DIR);
+            File imgFolder = new File(imgDir);
             if (!imgFolder.exists()) {
                 imgFolder.mkdirs();
             }
             
             // 6. 保存文件
-            File destFile = new File(IMG_DIR + newFileName);
+            File destFile = new File(imgDir , newFileName);
             file.transferTo(destFile);
             
             // 7. 返回新文件名
